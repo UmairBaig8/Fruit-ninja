@@ -3,242 +3,342 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fruit Slicer - Web & Mobile</title>
+    <title>Fruit Slicer: Pro Butcher</title>
     <style>
         :root {
             --primary-color: #ffcc00;
-            --accent-color: #ff4444;
-            --bg-gradient: radial-gradient(circle, #2b2b2b 0%, #1a1a1a 100%);
-            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Dynamic Theme Colors */
+            --sky-top: #2c3e50;
+            --sky-bot: #000000;
         }
 
-        * {
-            box-sizing: border-box;
-            user-select: none; /* Prevent text selection during play */
-            -webkit-user-select: none;
-        }
-
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Prevent scrolling */
-            background: var(--bg-gradient);
-            font-family: var(--font-main);
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
-            touch-action: none; /* Critical for mobile game controls */
+            touch-action: none;
+            background: linear-gradient(to bottom, var(--sky-top), var(--sky-bot));
+            transition: background 2s ease;
         }
 
-        /* Game Container */
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
+        /* --- REALISTIC CHOPPING BOARD --- */
+        .floor {
+            position: absolute; 
+            bottom: -50%; left: -10%; 
+            width: 120%; height: 150%;
+            z-index: 0;
+            
+            /* High Quality Dark Wood Image */
+            background-image: url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            
+            /* 3D Perspective to make it look like a slab */
+            transform: perspective(800px) rotateX(40deg);
+            transform-origin: bottom center;
+            
+            /* Conveyor Animation (Upwards) */
+            animation: scrollConveyor 3s linear infinite;
+            
+            /* Darken the board so fruits stand out */
+            filter: brightness(0.6) contrast(1.2);
         }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
+        @keyframes scrollConveyor {
+            from { background-position: 50% 0%; }
+            to { background-position: 50% -10%; }
         }
 
-        /* UI Overlays */
-        .ui-layer {
+        /* Board Rim for realism */
+        .floor::after {
+            content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas when playing */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 0.3s ease;
+            top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: inset 0 0 100px #000000;
+            pointer-events: none;
         }
 
-        .hidden {
-            opacity: 0;
-            pointer-events: none !important;
+        /* Vignette Focus */
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.9); pointer-events: none; z-index: 2;
         }
 
-        .active-ui {
-            opacity: 1;
-            pointer-events: auto !important;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-        }
+        #game-container { position: relative; width: 100%; height: 100%; z-index: 3; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
-        /* HUD (Heads Up Display) */
-        #hud {
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-direction: row;
-            padding: 20px;
-            height: auto;
-            background: none;
-            backdrop-filter: none;
-        }
+        /* Shake & Slow Mo */
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
-        .score-box {
-            font-size: 2rem;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
+        .slow-mo-active { filter: contrast(1.2) saturate(1.2); transition: filter 0.1s; }
 
-        .lives-box {
-            font-size: 2rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        /* UI */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; transition: opacity 0.3s ease;
         }
+        .hidden { opacity: 0; pointer-events: none !important; }
+        .active-ui { opacity: 1; pointer-events: auto !important; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px); z-index: 10; }
 
-        /* Menu & Game Over Screens */
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            color: var(--primary-color);
-            text-shadow: 3px 3px 0px #d35400;
-            text-align: center;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
+        #hud { justify-content: space-between; align-items: flex-start; flex-direction: row; padding: 20px 30px; height: auto; pointer-events: none; z-index: 5; }
+        
+        .score-box { text-shadow: 0 2px 10px rgba(0,0,0,0.8); transition: transform 0.1s; }
+        .score-pulse { transform: scale(1.2); color: #fff; }
+        .score-label { font-size: 0.8rem; color: #ddd; font-weight: bold; letter-spacing: 2px; display: block; }
+        .score-val { font-size: 3rem; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .best-val { font-size: 1rem; color: #bbb; opacity: 0.8; }
 
-        p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            text-align: center;
-            color: #eee;
-        }
+        .lives-box { font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.8); letter-spacing: 5px; transition: color 0.2s; }
+        .life-gained { color: #00ff00; text-shadow: 0 0 20px #00ff00; }
 
+        h1 { font-size: 4rem; margin: 0; color: #fff; text-shadow: 0 5px 0 #000, 0 0 30px var(--primary-color); text-transform: uppercase; letter-spacing: 5px; text-align: center; font-weight: 900; }
+        
         button {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 6px 0 #b30000, 0 10px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, #ffcc00, #ff9900);
+            color: #3e2723; border: none;
+            padding: 20px 60px; font-size: 1.8rem;
+            border-radius: 60px; cursor: pointer;
+            box-shadow: 0 10px 0 #b36b00, 0 20px 40px rgba(0,0,0,0.6);
             transition: transform 0.1s, box-shadow 0.1s;
-            font-family: var(--font-main);
-            text-transform: uppercase;
-            font-weight: bold;
+            text-transform: uppercase; font-weight: 900; font-family: inherit; margin-top: 30px;
         }
+        button:active { transform: translateY(6px); box-shadow: 0 4px 0 #b36b00, 0 10px 20px rgba(0,0,0,0.6); }
 
-        button:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #b30000, 0 4px 4px rgba(0,0,0,0.3);
-        }
+        .stat-label { font-size: 1.2rem; color: #ccc; text-transform: uppercase; letter-spacing: 2px; }
+        .stat-highlight { font-size: 6rem; color: var(--primary-color); display: block; margin: 20px 0; font-weight: 900; text-shadow: 0 4px 0 #000; }
 
-        button:hover {
-            background: #ff6666;
-        }
-
-        .stat-highlight {
-            font-size: 4rem;
-            color: var(--primary-color);
-            display: block;
-            margin: 10px 0;
-        }
-
-        /* Responsive Tweaks */
         @media (max-width: 600px) {
-            h1 { font-size: 2rem; }
-            .score-box, .lives-box { font-size: 1.5rem; }
-            button { padding: 12px 30px; font-size: 1.2rem; }
+            h1 { font-size: 2.8rem; } .score-val { font-size: 2.2rem; } .lives-box { font-size: 2rem; }
+            button { padding: 15px 40px; font-size: 1.4rem; } .stat-highlight { font-size: 4rem; }
         }
     </style>
 </head>
-<body>
+<body id="body">
+    <div class="floor"></div>
+    <div class="vignette"></div>
+    <main id="game-container"><canvas id="gameCanvas"></canvas></main>
 
-    <main id="game-container">
-        <canvas id="gameCanvas"></canvas>
-
-        <!-- Start Screen -->
-        <div id="start-screen" class="ui-layer active-ui">
-            <h1>Fruit Slicer</h1>
-            <p>Swipe to slice fruits.<br>Avoid the bombs 💣<br>Don't drop fruits!</p>
-            <button id="start-btn">Play Now</button>
+    <div id="start-screen" class="ui-layer active-ui">
+        <h1>Pro<br>Slicer</h1>
+        <p style="color:#ffcc00; font-weight:bold; font-size: 1.2rem; text-shadow: 0 2px 4px #000;">SLICE HEARTS (❤️) TO HEAL</p>
+        <div style="text-align: center; margin-bottom: 30px;">
+            <span class="stat-label">Best Score</span>
+            <span id="start-best" style="font-size: 2.5rem; font-weight: bold; display: block; text-shadow: 0 2px 5px #000;">0</span>
         </div>
+        <button id="start-btn">Start Game</button>
+    </div>
 
-        <!-- HUD -->
-        <div id="hud" class="ui-layer hidden">
-            <div class="score-box">Score: <span id="score-val">0</span></div>
-            <div class="lives-box" id="lives-val">❤️❤️❤️</div>
+    <div id="hud" class="ui-layer hidden">
+        <div class="score-box" id="score-box">
+            <span class="score-label">SCORE</span>
+            <span id="score-val" class="score-val">0</span>
+            <span class="best-val">BEST: <span id="hud-best-val">0</span></span>
         </div>
+        <div class="lives-box" id="lives-val">❤️❤️❤️</div>
+    </div>
 
-        <!-- Game Over Screen -->
-        <div id="game-over-screen" class="ui-layer hidden">
-            <h1>Game Over</h1>
-            <p>Final Score</p>
-            <span id="final-score" class="stat-highlight">0</span>
-            <button id="restart-btn">Play Again</button>
-        </div>
-    </main>
+    <div id="game-over-screen" class="ui-layer hidden">
+        <h1>Game Over</h1>
+        <p>GAME OVER</p>
+        <span class="stat-label">Final Score</span>
+        <span id="final-score" class="stat-highlight">0</span>
+        <button id="restart-btn">Try Again</button>
+    </div>
 
 <script>
 /**
- * Game Logic
+ * SAFE AUDIO SYSTEM
+ */
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                this.ctx = new AudioContext();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.3;
+                this.masterGain.connect(this.ctx.destination);
+            }
+        } catch (e) { console.warn("Audio not supported."); this.ctx = null; }
+    }
+
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(e => console.warn(e));
+    }
+
+    playSwish(velocity) {
+        if (!this.ctx) return;
+        try {
+            const bufferSize = this.ctx.sampleRate * 0.1; 
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            const gain = this.ctx.createGain();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(400, this.ctx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100 + (velocity * 100), this.ctx.currentTime + 0.1);
+            filter.Q.value = 1;
+            noise.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            noise.start(); noise.stop(this.ctx.currentTime + 0.1);
+        } catch(e) {}
+    }
+
+    playSplatter() {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(this.masterGain);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+        } catch(e) {}
+    }
+
+    playBomb() {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+            osc.connect(gain); gain.connect(this.masterGain);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.5);
+        } catch(e) {}
+    }
+
+    playDing() {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(this.masterGain);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+        } catch(e) {}
+    }
+
+    playLifeUp() {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+            osc.connect(gain); gain.connect(this.masterGain);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+        } catch(e) {}
+    }
+}
+
+let soundManager = null; 
+
+/**
+ * GAME CONFIGURATION
  */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const body = document.getElementById('body');
 
-// UI Elements
+// UI
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const hud = document.getElementById('hud');
+const scoreBox = document.getElementById('score-box');
 const scoreVal = document.getElementById('score-val');
 const livesVal = document.getElementById('lives-val');
+const hudBestVal = document.getElementById('hud-best-val');
+const startBestVal = document.getElementById('start-best');
 const finalScoreVal = document.getElementById('final-score');
 const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 
-// Game State
-let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+// State
+let gameState = 'MENU';
 let score = 0;
+let highScore = 0;
 let lives = 3;
+const MAX_LIVES = 5; 
 let width, height;
+let lastThemeScore = 0;
+let nextHeartScore = 50; 
+
+// Time
+let timeScale = 1.0; 
+
+// Combo
+let comboCount = 0;
+let comboTimer = 0;
+const maxComboTime = 25;
 
 // Entities
 let fruits = [];
-let particles = [];
+let chunks = []; 
+let particles = []; 
 let floatTexts = [];
-let bladePath = []; // Array of points for the visual trail
+let bladePath = [];
 
-// Settings
-const gravity = 0.15;
-const fruitSize = 60; // Base size
-const bladeLifetime = 10; // How many frames the blade trail lasts
-const spawnRateInitial = 60; // Frames between spawns
-let spawnRate = spawnRateInitial;
+// Physics
+const gravity = 0.25;
+const fruitSize = 60;
+const bladeLifetime = 12;
+let spawnRate = 60;
 let frameCount = 0;
 
-// Assets (Emojis)
+// Blade Calc
+let lastPointerX = 0;
+let lastPointerY = 0;
+let bladeSpeed = 0;
+
+// Assets
 const fruitTypes = ['🍎', '🍌', '🍉', '🍍', '🥝', '🍊', '🍇', '🥥'];
 const bombType = '💣';
+const heartType = '❤️';
 
-// Input Handling
-let isPointerDown = false;
-let pointerX = 0;
-let pointerY = 0;
-
-/* --- Initialization & Resizing --- */
+// Init
+function init() {
+    resize();
+    try { highScore = localStorage.getItem('proSlicerHighScore') || 0; } catch(e) { highScore = 0; }
+    if(startBestVal) startBestVal.innerText = highScore;
+    if(hudBestVal) hudBestVal.innerText = highScore;
+}
 
 function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    if(canvas) { canvas.width = width; canvas.height = height; }
 }
 window.addEventListener('resize', resize);
-resize();
 
-/* --- Input Events (Mouse & Touch) --- */
+/* --- INPUT --- */
 
 function getPos(e) {
-    if(e.touches && e.touches.length > 0) {
-        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
+    if(e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
     return { x: e.clientX, y: e.clientY };
 }
 
@@ -246,77 +346,72 @@ function handleStart(e) {
     if(gameState !== 'PLAYING') return;
     isPointerDown = true;
     const pos = getPos(e);
-    pointerX = pos.x;
-    pointerY = pos.y;
-    bladePath = []; // Reset trail on new swipe
+    lastPointerX = pos.x; lastPointerY = pos.y;
+    bladePath = [];
 }
 
 function handleMove(e) {
     if (!isPointerDown || gameState !== 'PLAYING') return;
     const pos = getPos(e);
-    pointerX = pos.x;
-    pointerY = pos.y;
+    pointerX = pos.x; pointerY = pos.y;
     
-    // Add point to blade trail
-    bladePath.push({ x: pointerX, y: pointerY, life: bladeLifetime });
+    const dx = pointerX - lastPointerX;
+    const dy = pointerY - lastPointerY;
+    bladeSpeed = Math.sqrt(dx*dx + dy*dy);
     
-    // Check collisions
+    if (bladeSpeed > 15 && frameCount % 5 === 0 && soundManager) soundManager.playSwish(Math.min(bladeSpeed, 50));
+
+    bladePath.push({ x: pointerX, y: pointerY, life: bladeLifetime, speed: bladeSpeed });
     checkCollisions(pointerX, pointerY);
+    
+    lastPointerX = pointerX; lastPointerY = pointerY;
 }
 
-function handleEnd() {
-    isPointerDown = false;
+function handleEnd() { isPointerDown = false; bladeSpeed = 0; }
+
+if(canvas) {
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('touchstart', handleStart, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { if(gameState === 'PLAYING') e.preventDefault(); handleMove(e); }, { passive: false });
+    window.addEventListener('touchend', handleEnd);
 }
 
-// Event Listeners
-canvas.addEventListener('mousedown', handleStart);
-canvas.addEventListener('mousemove', handleMove);
-window.addEventListener('mouseup', handleEnd);
-
-canvas.addEventListener('touchstart', handleStart, { passive: false });
-canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
-window.addEventListener('touchend', handleEnd);
-
-/* --- Game Classes --- */
+/* --- CLASSES --- */
 
 class Fruit {
-    constructor() {
+    constructor(type) {
         this.x = Math.random() * (width - 100) + 50;
         this.y = height + 60;
-        // Random velocity upwards
-        this.vx = (Math.random() - 0.5) * 6; // Slight horizontal movement
-        this.vy = -(Math.random() * 5 + 12); // Throw upwards
+        this.vx = (Math.random() - 0.5) * 6;
+        this.vy = -(Math.random() * 5 + 13);
         this.rotation = 0;
-        this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.25;
         this.active = true;
         this.sliced = false;
         
-        // Determine type
-        const isBomb = Math.random() < 0.15; // 15% chance for bomb
-        if (isBomb) {
-            this.type = bombType;
-            this.isBomb = true;
-            this.color = '#333';
-        } else {
-            this.type = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
-            this.isBomb = false;
-            this.color = '#ff4444';
-        }
+        this.type = type;
+        this.isBomb = (type === bombType);
+        this.isHeart = (type === heartType);
+        
+        if (this.isBomb) this.color = '#333';
+        else if (this.isHeart) this.color = '#ff0000';
+        else if (this.type === '🍎') this.color = '#ff0000';
+        else if (this.type === '🍌') this.color = '#ffe135';
+        else if (this.type === '🍉') this.color = '#ff6b6b';
+        else this.color = '#ffcc00';
     }
 
     update() {
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += gravity; // Apply gravity
-        this.rotation += this.rotationSpeed;
+        this.vy += gravity * timeScale;
+        this.rotation += this.rotationSpeed * timeScale;
 
-        // Deactivate if falls below screen
         if (this.y > height + 100 && this.vy > 0) {
             this.active = false;
-            if (!this.sliced && !this.isBomb) {
-                // Lost a life for dropping a fruit
-                loseLife();
-            }
+            if (!this.sliced && !this.isBomb && !this.isHeart) loseLife();
         }
     }
 
@@ -324,289 +419,342 @@ class Fruit {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
-        
-        // Draw Emoji centered
         ctx.font = `${fruitSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
-        // Shadow
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15;
+        
+        if (this.isHeart) {
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 20;
+        }
         
         ctx.fillText(this.type, 0, 0);
-        
-        // Debug hit circle (optional, disabled for cleaner look)
-        // ctx.strokeStyle = 'white';
-        // ctx.beginPath(); ctx.arc(0, 0, fruitSize/2, 0, Math.PI*2); ctx.stroke();
-        
+        ctx.restore();
+    }
+}
+
+class FruitChunk {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.color = color;
+        this.vx = (Math.random() - 0.5) * 5;
+        this.vy = -(Math.random() * 5 + 2);
+        this.life = 1.0;
+        this.rotation = Math.random() * Math.PI;
+        this.rotSpeed = (Math.random() - 0.5) * 0.2;
+        this.size = fruitSize * 0.6;
+    }
+    update() {
+        this.x += this.vx * timeScale;
+        this.y += this.vy * timeScale;
+        this.vy += gravity * timeScale;
+        this.rotation += this.rotSpeed * timeScale;
+        this.life -= 0.02;
+    }
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(0, 0, this.size/2, 0, Math.PI*2); ctx.fill();
         ctx.restore();
     }
 }
 
 class Particle {
     constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
+        this.x = x; this.y = y;
         const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 5 + 2;
+        const speed = Math.random() * 6 + 2;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.life = 1.0;
-        this.decay = Math.random() * 0.03 + 0.02;
+        this.decay = Math.random() * 0.02 + 0.01;
         this.color = color;
-        this.size = Math.random() * 5 + 3;
+        this.size = Math.random() * 4 + 1;
     }
-
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vy += gravity * 0.5; // Lighter gravity for particles
+        this.x += this.vx * timeScale; 
+        this.y += this.vy * timeScale;
+        this.vy += (gravity * 0.5) * timeScale;
         this.life -= this.decay;
     }
-
     draw() {
         ctx.globalAlpha = this.life;
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
         ctx.globalAlpha = 1.0;
     }
 }
 
 class FloatingText {
-    constructor(x, y, text, color) {
-        this.x = x;
-        this.y = y;
+    constructor(x, y, text, color, size = 30) {
+        this.x = x; this.y = y;
         this.text = text;
         this.color = color;
         this.life = 1.0;
-        this.vy = -2;
+        this.vy = -2.5;
+        this.size = size;
     }
-
     update() {
-        this.y += this.vy;
-        this.life -= 0.02;
+        this.y += this.vy * timeScale;
+        this.life -= 0.025;
     }
-
     draw() {
         ctx.globalAlpha = this.life;
         ctx.fillStyle = this.color;
-        ctx.font = 'bold 30px sans-serif';
-        ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
+        ctx.font = `900 ${this.size}px Arial`;
+        ctx.shadowColor = 'black'; ctx.shadowBlur = 5;
         ctx.fillText(this.text, this.x, this.y);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1.0;
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1.0;
     }
 }
 
-/* --- Game Logic Functions --- */
+/* --- LOGIC --- */
 
 function spawnFruit() {
-    // Determine how many to spawn at once (increases difficulty)
+    if (score >= nextHeartScore) {
+        fruits.push(new Fruit(heartType));
+        nextHeartScore += 50; 
+    }
+
     let count = 1;
     if (score > 50) count = Math.random() < 0.3 ? 2 : 1;
-    if (score > 100) count = Math.random() < 0.5 ? 2 : 1;
-    if (score > 200) count = Math.floor(Math.random() * 3) + 1;
-
+    if (score > 150) count = Math.floor(Math.random() * 3) + 1;
+    if (score > 300) count = Math.floor(Math.random() * 4) + 1;
+    
     for(let i=0; i<count; i++) {
-        fruits.push(new Fruit());
-    }
-}
-
-function createExplosion(x, y, color) {
-    for (let i = 0; i < 15; i++) {
-        particles.push(new Particle(x, y, color));
+        const rand = Math.random();
+        let type = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
+        if (rand < 0.15) type = bombType;
+        fruits.push(new Fruit(type));
     }
 }
 
 function checkCollisions(x, y) {
-    // Iterate backwards to allow removal
     for (let i = fruits.length - 1; i >= 0; i--) {
         const f = fruits[i];
         if (f.sliced || !f.active) continue;
-
-        // Distance check
         const dist = Math.hypot(f.x - x, f.y - y);
-        
-        // Hit radius slightly larger than visual size for better feel
-        if (dist < fruitSize * 0.7) {
-            handleSlice(f);
-        }
+        if (dist < fruitSize * 0.8) handleSlice(f);
     }
+}
+
+function triggerSlowMo() {
+    timeScale = 0.2;
+    body.classList.add('slow-mo-active');
+    setTimeout(() => { body.classList.remove('slow-mo-active'); timeScale = 1.0; }, 300);
 }
 
 function handleSlice(fruit) {
     fruit.sliced = true;
-    
+    comboTimer = maxComboTime;
+
+    if (fruit.isHeart) {
+        if (lives < MAX_LIVES) {
+            lives++;
+            if(livesVal) {
+                livesVal.innerText = '';
+                for(let i=0; i<lives; i++) livesVal.innerText += '❤️';
+                livesVal.classList.add('life-gained');
+                setTimeout(() => livesVal.classList.remove('life-gained'), 200);
+            }
+        }
+        if(soundManager) soundManager.playLifeUp();
+        createExplosion(fruit.x, fruit.y, '#ff0000', 20);
+        floatTexts.push(new FloatingText(fruit.x, fruit.y, "+1 LIFE!", "#00ff00", 40));
+        fruit.active = false;
+        return; 
+    }
+
     if (fruit.isBomb) {
-        // Sliced a bomb
-        createExplosion(fruit.x, fruit.y, '#ffffff');
-        createExplosion(fruit.x, fruit.y, '#ff0000');
-        floatTexts.push(new FloatingText(fruit.x, fruit.y, "BOOM!", "#ff0000"));
-        loseLife(true); // true = instant game over or major penalty
+        triggerShake();
+        triggerSlowMo();
+        if(soundManager) soundManager.playBomb();
+        createExplosion(fruit.x, fruit.y, '#fff', 30);
+        createExplosion(fruit.x, fruit.y, '#f00', 30);
+        floatTexts.push(new FloatingText(fruit.x, fruit.y, "BOOM!", "#f00", 60));
+        loseLife(true); 
+        comboCount = 0;
     } else {
-        // Sliced a fruit
-        score += 10;
-        scoreVal.innerText = score;
+        comboCount++;
+        if(soundManager) soundManager.playSplatter();
+        if (comboCount % 5 === 0 && soundManager) soundManager.playDing();
         
-        // Create juice particles (fruit color approximation)
-        const colors = ['#ff0000', '#ffff00', '#ffa500', '#800080'];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        createExplosion(fruit.x, fruit.y, randomColor);
+        let points = 10;
+        let text = "+10";
+        let color = "#fff";
+        let size = 30;
+
+        if (comboCount > 10) { points = 50; text = "INSANE!"; color = "#f0f"; size = 50; triggerSlowMo(); }
+        else if (comboCount > 5) { points = 30; text = "UNSTOPPABLE!"; color = "#f00"; size = 45; }
+        else if (comboCount > 2) { points = 20; text = `${comboCount}x COMBO!`; color = "#0ff"; size = 40; }
+
+        score += points;
+        if(scoreVal) scoreVal.innerText = score;
         
-        // Visual feedback
-        floatTexts.push(new FloatingText(fruit.x, fruit.y, "+10", "#fff"));
+        if(scoreBox) {
+            scoreBox.classList.remove('score-pulse'); void scoreBox.offsetWidth; scoreBox.classList.add('score-pulse');
+        }
+
+        for(let i=0; i<3; i++) chunks.push(new FruitChunk(fruit.x, fruit.y, fruit.color));
+        createExplosion(fruit.x, fruit.y, fruit.color);
         
-        // Remove fruit immediately (simulated split)
-        // In a full game, you might split the fruit in half, 
-        // but for this simple version, it vanishes with particles.
+        floatTexts.push(new FloatingText(fruit.x, fruit.y, text, color, size));
         fruit.active = false;
     }
 }
 
+function createExplosion(x, y, color, count=15) {
+    for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+}
+
+function triggerShake() {
+    body.classList.remove('shake');
+    void body.offsetWidth;
+    body.classList.add('shake');
+}
+
 function loseLife(instant = false) {
     if (gameState === 'GAMEOVER') return;
-
     lives--;
     
-    // Visual flash on screen
     const flash = document.createElement('div');
-    flash.style.position = 'absolute';
-    flash.style.top = '0'; flash.style.left = '0';
-    flash.style.width = '100%'; flash.style.height = '100%';
-    flash.style.background = 'rgba(255,0,0,0.3)';
-    flash.style.pointerEvents = 'none';
-    document.body.appendChild(flash);
+    flash.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,0,0,0.3);pointer-events:none;z-index:100;";
+    if(document.body) document.body.appendChild(flash);
     setTimeout(() => flash.remove(), 100);
 
-    // Update hearts
-    let hearts = '';
-    for(let i=0; i<lives; i++) hearts += '❤️';
-    livesVal.innerText = hearts;
+    let hearts = ''; for(let i=0; i<lives; i++) hearts += '❤️';
+    if(livesVal) livesVal.innerText = hearts;
 
-    if (lives <= 0 || instant) {
-        endGame();
-    }
+    if (lives <= 0 || instant) endGame();
 }
 
 function endGame() {
     gameState = 'GAMEOVER';
-    hud.classList.remove('active-ui');
-    hud.classList.add('hidden');
-    gameOverScreen.classList.remove('hidden');
-    gameOverScreen.classList.add('active-ui');
-    finalScoreVal.innerText = score;
+    if (score > highScore) {
+        highScore = score;
+        try { localStorage.setItem('proSlicerHighScore', highScore); } catch(e){}
+        if(hudBestVal) hudBestVal.innerText = highScore;
+        if(startBestVal) startBestVal.innerText = highScore;
+    }
+    
+    hud.classList.remove('active-ui'); hud.classList.add('hidden');
+    gameOverScreen.classList.remove('hidden'); gameOverScreen.classList.add('active-ui');
+    if(finalScoreVal) finalScoreVal.innerText = score;
 }
 
 function resetGame() {
-    score = 0;
-    lives = 3;
-    frameCount = 0;
-    spawnRate = spawnRateInitial;
+    score = 0; lives = 3; frameCount = 0; spawnRate = 60;
+    comboCount = 0; comboTimer = 0; timeScale = 1.0;
+    nextHeartScore = 50;
+    fruits = []; chunks = []; particles = []; floatTexts = []; bladePath = [];
     
-    fruits = [];
-    particles = [];
-    floatTexts = [];
-    bladePath = [];
+    if(scoreVal) scoreVal.innerText = "0";
+    if(livesVal) livesVal.innerText = "❤️❤️❤️";
+    if(hudBestVal) hudBestVal.innerText = highScore;
+    lastThemeScore = 0;
     
-    scoreVal.innerText = score;
-    livesVal.innerText = '❤️❤️❤️';
-    
-    startScreen.classList.add('hidden');
-    startScreen.classList.remove('active-ui');
-    gameOverScreen.classList.add('hidden');
-    gameOverScreen.classList.remove('active-ui');
-    
-    hud.classList.remove('hidden');
-    hud.classList.add('active-ui');
+    // Reset Background Colors
+    body.style.setProperty('--sky-top', '#2c3e50');
+    body.style.setProperty('--sky-bot', '#000000');
+
+    startScreen.classList.add('hidden'); startScreen.classList.remove('active-ui');
+    gameOverScreen.classList.add('hidden'); gameOverScreen.classList.remove('active-ui');
+    hud.classList.remove('hidden'); hud.classList.add('active-ui');
     
     gameState = 'PLAYING';
     requestAnimationFrame(loop);
 }
 
-/* --- Main Game Loop --- */
+function updateAtmosphere() {
+    if (score === lastThemeScore) return;
+    
+    // Only subtle lighting changes now that we have the wood image
+    if (score > 50 && lastThemeScore <= 50) {
+        // Warm Light
+        body.style.setProperty('--sky-top', '#5D4037');
+        body.style.setProperty('--sky-bot', '#1a1a1a');
+    }
+    
+    if (score > 150 && lastThemeScore <= 150) {
+        // Cold/Dark Light
+        body.style.setProperty('--sky-top', '#101820');
+        body.style.setProperty('--sky-bot', '#000000');
+    }
+
+    lastThemeScore = score;
+}
+
+/* --- MAIN LOOP --- */
 
 function update() {
     frameCount++;
+    if (frameCount % 600 === 0 && spawnRate > 20) spawnRate -= 5;
+    if (frameCount % spawnRate === 0) spawnFruit();
+    
+    updateAtmosphere();
 
-    // Difficulty ramping
-    if (frameCount % 600 === 0 && spawnRate > 20) {
-        spawnRate -= 5;
+    if (comboTimer > 0) {
+        comboTimer -= timeScale;
+    } else {
+        if (comboCount > 0) comboCount = 0;
     }
 
-    // Spawner
-    if (frameCount % spawnRate === 0) {
-        spawnFruit();
-    }
-
-    // Update Blade
     for (let i = bladePath.length - 1; i >= 0; i--) {
-        bladePath[i].life--;
-        if (bladePath[i].life <= 0) {
-            bladePath.splice(i, 1);
-        }
+        bladePath[i].life -= timeScale;
+        if (bladePath[i].life <= 0) bladePath.splice(i, 1);
     }
 
-    // Update Fruits
-    for (let i = fruits.length - 1; i >= 0; i--) {
-        fruits[i].update();
-        if (!fruits[i].active) {
-            fruits.splice(i, 1);
-        }
-    }
+    fruits.forEach(f => f.update());
+    fruits = fruits.filter(f => f.active);
 
-    // Update Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].update();
-        if (particles[i].life <= 0) {
-            particles.splice(i, 1);
-        }
-    }
+    chunks.forEach(c => c.update());
+    chunks = chunks.filter(c => c.life > 0);
 
-    // Update Floating Text
-    for (let i = floatTexts.length - 1; i >= 0; i--) {
-        floatTexts[i].update();
-        if (floatTexts[i].life <= 0) {
-            floatTexts.splice(i, 1);
-        }
-    }
+    particles.forEach(p => p.update());
+    particles = particles.filter(p => p.life > 0);
+
+    floatTexts.forEach(t => t.update());
+    floatTexts = floatTexts.filter(t => t.life > 0);
 }
 
 function draw() {
-    // Clear screen
+    if(!ctx) return;
     ctx.clearRect(0, 0, width, height);
-
-    // Draw Fruits
+    
+    chunks.forEach(c => c.draw());
     fruits.forEach(f => f.draw());
-
-    // Draw Particles
     particles.forEach(p => p.draw());
-
-    // Draw Blade Trail
+    
     if (bladePath.length > 1) {
         ctx.beginPath();
         ctx.moveTo(bladePath[0].x, bladePath[0].y);
         for (let i = 1; i < bladePath.length; i++) {
-            // Quadratic curve for smoothness
-            // ctx.lineTo(bladePath[i].x, bladePath[i].y);
-            const p0 = bladePath[i-1];
-            const p1 = bladePath[i];
-            ctx.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x)/2, (p0.y + p1.y)/2);
+            ctx.quadraticCurveTo(bladePath[i-1].x, bladePath[i-1].y, (bladePath[i-1].x + bladePath[i].x)/2, (bladePath[i-1].y + bladePath[i].y)/2);
         }
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = 'white';
-        ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-        ctx.shadowBlur = 0; // Reset
+        ctx.lineCap = 'round'; 
+        ctx.lineJoin = 'round'; 
+        
+        let bColor = 'white';
+        let bGlow = 'white';
+        let bWidth = 6 + (bladeSpeed / 5);
+
+        if (comboCount >= 2) { bColor = '#00ffff'; bGlow = '#00ffff'; }
+        if (comboCount >= 5) { bColor = '#ff00ff'; bGlow = '#ff00ff'; }
+        if (comboCount >= 10) { bColor = '#ff4400'; bGlow = '#ff0000'; }
+
+        ctx.lineWidth = bWidth;
+        ctx.strokeStyle = bColor;
+        ctx.shadowColor = bGlow;
+        ctx.shadowBlur = 20;
+        ctx.stroke(); 
+        ctx.shadowBlur = 0;
     }
 
-    // Draw Floating Text
     floatTexts.forEach(t => t.draw());
 }
 
@@ -618,9 +766,17 @@ function loop() {
     }
 }
 
-// Initial Button Listeners
-startBtn.addEventListener('click', resetGame);
-restartBtn.addEventListener('click', resetGame);
+startBtn.addEventListener('click', () => {
+    soundManager = new SoundManager();
+    if(soundManager) soundManager.resume();
+    resetGame();
+});
+restartBtn.addEventListener('click', () => {
+    if(soundManager) soundManager.resume();
+    resetGame();
+});
+
+init();
 
 </script>
 </body>
